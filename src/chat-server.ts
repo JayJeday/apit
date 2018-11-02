@@ -3,6 +3,7 @@ import * as express from 'express';
 import * as socketIo from 'socket.io';
 
 import { Message } from './models/message.model';
+import { Notify } from './models/notify.model';
 
 /*
 Connect server main class
@@ -20,6 +21,9 @@ export class ChatServer {
   
     //comunication that will send events
     private io: SocketIO.Server;
+
+    //room
+    private room:string;
 
     //the port to use
     private port: string | number;
@@ -59,29 +63,42 @@ export class ChatServer {
             console.log('Running server on port %s', this.port);
         });
 
-        //client connect
+        //client connect to a specific room/ handle specific connections
         this.io.on('connect', (socket: any) => {
             console.log('Connected client on port %s.', this.port);
             
-            //create a room TODO
-            
+            // once a client has connected, 
+            //we expect to get a ping from them saying what room they want to join
+            socket.on('created', function(room) {
+                
+                socket.join(room);
+                this.room = room;
 
-            //message send management
-            socket.on('message', (m: Message) => {
-                //put message object into json object and send it
-                console.log('[server](message): %s', JSON.stringify(m));
-                this.io.emit('message', m);
+                console.log('Room created', this.room);
             });
 
 
-            //notify the tech client is waiting
-            socket.on('notify', (data:any)=>{
+
+            //message send management
+            socket.on('room', (m: Message) => {
+                //put message object into json object and send it
+                console.log('[server](message): %s', JSON.stringify(m));
+                //send message to specific room 
+         //       this.io.emit('message', m);
+                socket.in(this.room).emit('message', m);
+            });
+
+
+            //****** */notify   ***     the tech client is waiting
+            socket.on('notify', (data:Notify)=>{
                 console.log('(notify):%s', JSON.stringify(data));
-                this.io.emit('notify', data);
+            //    this.io.emit('notify', data);
+            socket.in(this.room).emit('notify', data);
             });
 
             socket.on('disconnect', () => {
                 console.log('Client disconnected');
+                
             });
         });
     }

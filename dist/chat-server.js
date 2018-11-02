@@ -36,20 +36,29 @@ var ChatServer = /** @class */ (function () {
         this.server.listen(this.port, function () {
             console.log('Running server on port %s', _this.port);
         });
-        //client connect
+        //client connect to a specific room/ handle specific connections
         this.io.on('connect', function (socket) {
             console.log('Connected client on port %s.', _this.port);
-            //create a room TODO
+            // once a client has connected, 
+            //we expect to get a ping from them saying what room they want to join
+            socket.on('created', function (room) {
+                socket.join(room);
+                this.room = room;
+                console.log('Room created', this.room);
+            });
             //message send management
-            socket.on('message', function (m) {
+            socket.on('room', function (m) {
                 //put message object into json object and send it
                 console.log('[server](message): %s', JSON.stringify(m));
-                _this.io.emit('message', m);
+                //send message to specific room 
+                //       this.io.emit('message', m);
+                socket.in(_this.room).emit('message', m);
             });
-            //notify the tech client is waiting
+            //****** */notify   ***     the tech client is waiting
             socket.on('notify', function (data) {
                 console.log('(notify):%s', JSON.stringify(data));
-                _this.io.emit('notify', data);
+                //    this.io.emit('notify', data);
+                socket.in(_this.room).emit('notify', data);
             });
             socket.on('disconnect', function () {
                 console.log('Client disconnected');
